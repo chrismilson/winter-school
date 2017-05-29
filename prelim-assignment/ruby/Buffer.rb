@@ -91,7 +91,17 @@ class Buffer
 		#
 		## Integer, Integer -> Buffer
 		def __from_i(k, n)
-			raise NotImplementedError
+			if n < 0 then
+				raise RangeError
+			end
+			if (k >> (n * 8)) != 0 then
+				raise RangeError
+			end
+			bytes = Array.new(n)
+			n.times do |i|
+				bytes[i] = k >> (n - i - 1) * 8 & 0xFF
+			end
+			return Buffer.__new__(bytes)
 		end
 	end
 
@@ -174,7 +184,11 @@ class Buffer
 	#
 	## -> Integer
 	def to_i
-		raise NotImplementedError
+		k = 0
+		size.times do |i|
+			k |= @bytes[i] << (size - i - 1) * 8
+		end
+		return k
 	end
 
 	## -> Buffer
@@ -189,7 +203,17 @@ class Buffer
 	#
 	## -> void
 	def succ!
-		raise NotImplementedError
+		i = size
+		while i > 0 do
+			i -= 1
+			if @bytes[i] != 0xFF then
+				@bytes[i] = @bytes[i] + 1
+				break
+			else
+				@bytes[i] = 0
+			end
+		end
+		return
 	end
 
 	## ..Object? -> boolean
@@ -239,7 +263,7 @@ class Buffer
 	#
 	## Integer -> Buffer
 	def __xor_byte(o)
-		raise NotImplementedError
+		return Buffer.__new__(@bytes.map { |b| b ^ o })
 	end
 
 	#
@@ -247,7 +271,8 @@ class Buffer
 	#
 	## Buffer -> Buffer
 	def __xor_buffer(o)
-		raise NotImplementedError
+		e = o.__bytes.cycle
+		return Buffer.__new__(@bytes.map { |b| b ^ e.next })
 	end
 
 	## -> String
@@ -292,7 +317,10 @@ class Buffer
 	#
 	## Integer, Integer -> Buffer
 	def __slice(i, n)
-		raise NotImplementedError
+		if i < 0 || i >= size then
+			raise IndexError
+		end
+		return Buffer.__new__(@bytes[i, [i + n, size - 1].min])
 	end
 
 	## -> Array<Buffer>
@@ -311,7 +339,13 @@ class Buffer
 	#
 	## Integer -> Array<Buffer>
 	def __slices(n)
-		raise NotImplementedError
+		bytes = Array.new
+		i = 0
+		while i < size do
+			bytes.push(__slice(i, n))
+			i += n
+		end
+		return bytes
 	end
 
 	## &{Buffer -> void} -> void
@@ -331,6 +365,11 @@ class Buffer
 	#
 	## Integer, &{Buffer -> void} -> void
 	def __each_slice(n)
-		raise NotImplementedError
+		i = 0
+		while i < size do
+			yield __slice(i, n)
+			i += n
+		end
+		return
 	end
 end
